@@ -55,6 +55,10 @@ def create_argparser():
         '-o', '--stdout', action='store_true',
         help='Do not print to a file but to the console instead',
         dest='stdout')
+    argparser.add_argument(
+        '-c', '--config', action='store_true',
+        help='Change elements of the configuration',
+        dest='configuration')
     namespace = argparser.parse_args()
     if namespace.scope_name == 'item' and not namespace.scope_item:
         print("ERROR: The scope=item option requires: [-i/--item].")
@@ -132,6 +136,13 @@ def setup_config(path):
     with open(path, mode='w') as configfile:
         config.write(configfile)
 
+def edit_config(path):
+    print(sys.platform)
+    if sys.platform == 'linux':
+        os.system(str(f'vim {path}'))
+    elif sys.platform == 'win32':
+        os.system(str(f'notepad {path}'))
+
 def get_attribute_ids(config, headers):
     """
         Let the user choose, which attributes to include into the dataset.
@@ -200,6 +211,11 @@ def cli():
     url = config['PLENTY']['url']
 
     headers = pa.plenty_api_login(url=url)
+
+    if argparser['namespace'].configuration:
+        if not edit_config(path=CONFIG_FILE):
+            sys.exit(1)
+        sys.exit(0)
     if argparser['scope']['name'] == 'variation':
         item = pa.plenty_api_get_itemid_for_variation(
             url=url, headers=headers,
