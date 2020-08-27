@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "plenty_attribute_export"
-version = "0.1.0"
+version = "0.2.0"
 description = "Easy export of attribute data for variations from PlentyMarkets"
 authors = ["Sebastian Fricke <sebastian.fricke.linux@gmail.com>"]
 license = "GPL-3.0-or-later"
@@ -9,7 +9,6 @@ license = "GPL-3.0-or-later"
 python = "^3.7"
 requests = "^2.24.0"
 pandas = "^1.1.0"
-configparser = "^5.0.0"
 simplejson = "^3.17.2"
 keyring = "^21.2.1"
 tabulate = "^0.8.7"
