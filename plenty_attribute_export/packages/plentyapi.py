@@ -5,6 +5,7 @@
 
     Various calls to the PlentyMarkets API for ITEM data.
 """
+import sys
 import requests
 import pandas
 import simplejson
@@ -122,6 +123,11 @@ def get_route(scope):
             scope['args']['item'], scope['args']['variation']))
     return route + "?with=variationAttributeValues"
 
+def build_login_token(response_json):
+    token_type = response_json['token_type']
+    access_token = response_json['access_token']
+    return token_type + ' ' + access_token
+
 def plenty_api_login(url):
     """
         Get the bearer token with the credentials saved in the data file.
@@ -130,14 +136,40 @@ def plenty_api_login(url):
             url [String] : Base URL of the shop provided by the config
     """
 
+    token = ''
     keyring = CredentialManager()
     creds = keyring.get_credentials()
     if not creds:
         keyring.set_credentials()
         creds = keyring.get_credentials()
     endpoint = url + '/rest/login'
-    request = requests.post(endpoint, params=creds)
-    token = request.json()['token_type'] + ' ' + request.json()['access_token']
+    response = requests.post(endpoint, params=creds)
+    if response.status_code == 403:
+        print("ERROR: Login to API failed, your account is locked")
+        print("unlock @ Setup->settings->accounts->go to user->unlock login")
+    try:
+        token = build_login_token(response_json=response.json())
+    except KeyError as err:
+        try:
+            if response.json()['error'] == 'invalid_credentials':
+                print("Wrong credentials: Please enter valid credentials.")
+                keyring.delete_credentials()
+                keyring.set_credentials()
+                creds = keyring.get_credentials()
+                response = requests.post(endpoint, params=creds)
+                token = build_login_token(response_json=response.json())
+            else:
+                print(f"ERROR: Login to API failed with: {err}\nstatus: {respnse}")
+                sys.exit(1)
+        except KeyError as err:
+            print(f"ERROR: Login to API failed with: {err}\nstatus: {response}")
+            try:
+                print(f"{response.json()}")
+            except Exception as err:
+                print(f"Could not open data: {err}")
+
+    if not token:
+        return None
     return {'Authorization': token}
 
 def plenty_api_get_variations(url, headers, config, scope):
@@ -146,15 +178,15 @@ def plenty_api_get_variations(url, headers, config, scope):
         with incremental data from the API.
 
         Parameter:
-            url [String]    : Base URL of the shop provided by the config
-            headers [Dict]  : HTTP header for the GET request
-                              (has to contain atleast authorization)
-            config [Dict]   : Config mapping of values used in
-                              the plentymarkets client
-            scope [Dict]    : User defined options about the breadth of the
-                              data pull.
-                              (name: {all, item, variation}),
-                              (args: {item, variation})
+        url [String]    : Base URL of the shop provided by the config
+        headers [Dict]  : HTTP header for the GET request
+                            (has to contain atleast authorization)
+        config [Dict]   : Config mapping of values used in
+                            the plentymarkets client
+        scope [Dict]    : User defined options about the breadth of the
+                            data pull.
+                            (name: {all, item, variation}),
+                            (args: {item, variation})
     """
     variation_list = []
     columns = []

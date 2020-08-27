@@ -15,3 +15,7 @@ class CredentialManager():
         if not user or not password:
             return {}
         return {'username':user, 'password':password}
+
+    def delete_credentials(self):
+        keyring.delete_password('plenty-identity', 'user')
+        keyring.delete_password('plenty-identity', 'password')
