@@ -26,7 +26,14 @@ import easygui
 import plenty_attribute_export.packages.plentyapi as pa
 import plenty_attribute_export.packages.progress as pro
 
-CONFIG_FILE = 'data/config.ini'
+if sys.platform == 'linux':
+    linux_user = os.getlogin()
+    CONFIG_FILE = os.path.join('/', 'home', str(f'{linux_user}'),
+                               '.plenty_export_config.ini')
+elif sys.platform == 'win32':
+    win_user = os.getlogin()
+    CONFIG_FILE = os.path.join('C:', 'Users', str(f'{win_user}'),
+                               '.plenty_export_config.ini')
 
 def create_argparser():
     """ Set up the argument parser, with the different arguments
@@ -137,7 +144,6 @@ def setup_config(path):
         config.write(configfile)
 
 def edit_config(path):
-    print(sys.platform)
     if sys.platform == 'linux':
         os.system(str(f'vim {path}'))
     elif sys.platform == 'win32':
@@ -194,7 +200,7 @@ def build_output_name(name):
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
     filetype = '.csv'
     name = date + '_' + name + filetype
-    return os.path.join(cwd, name)
+    return os.path.join(os.getcwd(), name)
 
 def cli():
     """
@@ -211,6 +217,8 @@ def cli():
     url = config['PLENTY']['url']
 
     headers = pa.plenty_api_login(url=url)
+    if not headers:
+        sys.exit(1)
 
     if argparser['namespace'].configuration:
         if not edit_config(path=CONFIG_FILE):
@@ -247,8 +255,12 @@ def cli():
                         signal=progress))
 
     if not argparser['namespace'].stdout or argparser['scope']['name'] == 'all':
-        output_path = build_output_name(
-            name=str(f"Attribute_{argparser['scope']['name']}"))
+        try:
+            output_path = build_output_name(
+                name=str(f"Attribute_{argparser['scope']['name']}"))
+        except Exception as err:
+            print(f"ERROR: couldn't build output name => {err}")
+            output_path = easygui.filesavebox()
         frame.to_csv(output_path, sep=';', index=False)
     elif argparser['namespace'].stdout:
         print(tabulate.tabulate(frame, headers='keys', tablefmt='fancygrid',
